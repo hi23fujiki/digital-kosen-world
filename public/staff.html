@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <title>受付画面</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body class="staff-page">
+  <div class="staff-container">
+    <h1>受付画面</h1>
+    <p class="description">キャラクター名・高専・画像を確認してから送信します。</p>
+
+    <section class="staff-section">
+      <h2>1. キャラ名を入力</h2>
+      <input type="text" id="characterName" placeholder="例：くまロボ">
+      <p class="small-text">未入力の場合は「キャラ1」のように自動で名前がつきます。</p>
+    </section>
+
+    <section class="staff-section">
+      <h2>2. 高専を選ぶ</h2>
+      <select id="schoolName">
+        <option value="熊本高専">熊本高専</option>
+        <option value="茨城高専">茨城高専</option>
+      </select>
+    </section>
+
+    <section class="staff-section">
+      <h2>3. 画像を選ぶ</h2>
+      <input type="file" id="imageFile" accept="image/*">
+      <p class="small-text">画像を選ぶと、自動で背景除去してプレビューします。</p>
+
+      <div class="preview-area">
+        <p class="preview-title">背景除去後プレビュー</p>
+        <div class="preview-box">
+          <img id="imagePreview" alt="背景除去後プレビュー">
+          <p id="noPreviewText">まだ画像が処理されていません</p>
+        </div>
+      </div>
+    </section>
+
+    <section class="staff-section">
+      <h2>4. 動きを選ぶ</h2>
+      <p class="small-text">プレビューを確認して、問題なければ動きを選んで送信してください。</p>
+
+      <div class="button-area">
+        <button onclick="sendCharacter('jump')" class="motion-button">1</button>
+        <button onclick="sendCharacter('spin')" class="motion-button">2</button>
+        <button onclick="sendCharacter('bounce')" class="motion-button">3</button>
+        <button onclick="sendCharacter('float')" class="motion-button">4</button>
+      </div>
+    </section>
+
+    <p id="statusMessage" class="status-message">待機中</p>
+
+    <hr>
+
+    <section class="staff-section">
+      <button onclick="resetCharacters()" class="reset-button">全キャラを消す</button>
+    </section>
+  </div>
+
+  <script src="/socket.io/socket.io.js"></script>
+  <script src="staff.js"></script>
+</body>
+</html>

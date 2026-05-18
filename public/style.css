@@ -1,0 +1,282 @@
+body {
+  font-family: sans-serif;
+  text-align: center;
+  background: #f7f7f7;
+  margin: 0;
+  padding: 0;
+}
+
+h1 {
+  color: #222;
+  font-size: 36px;
+  margin: 20px 0;
+}
+
+h2 {
+  font-size: 28px;
+  margin: 0 0 18px 0;
+}
+
+p {
+  font-size: 18px;
+}
+
+canvas {
+  background: white;
+  border: 3px solid #333;
+}
+
+/* 受付画面全体 */
+.staff-page {
+  background: #f4f8ff;
+  padding: 24px;
+}
+
+/* 受付画面のカード */
+.staff-container {
+  max-width: 720px;
+  margin: 0 auto;
+  background: white;
+  border: 3px solid #333;
+  border-radius: 18px;
+  padding: 32px 28px;
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.12);
+}
+
+.description {
+  font-size: 20px;
+  margin-bottom: 34px;
+}
+
+.staff-section {
+  margin: 34px 0;
+}
+
+/* テキスト入力 */
+input[type="text"] {
+  font-size: 22px;
+  padding: 12px 16px;
+  border: 2px solid #333;
+  border-radius: 10px;
+  width: 80%;
+  max-width: 420px;
+}
+
+/* ファイル入力 */
+input[type="file"] {
+  font-size: 18px;
+  padding: 12px;
+  border: 2px solid #333;
+  border-radius: 10px;
+  background: white;
+  max-width: 90%;
+}
+
+/* 補足説明 */
+.small-text {
+  font-size: 14px;
+  color: #555;
+  margin-top: 12px;
+}
+
+/* ボタンエリア */
+.button-area {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 14px;
+}
+
+/* 通常ボタン */
+button {
+  font-size: 22px;
+  padding: 14px 28px;
+  cursor: pointer;
+  border: 2px solid #333;
+  border-radius: 12px;
+  background: white;
+  min-width: 140px;
+}
+
+button:hover {
+  background: #eaf7ff;
+  transform: translateY(-2px);
+}
+
+/* リセットボタン */
+.reset-button {
+  background: #ffdddd;
+  border-color: #cc3333;
+  color: #990000;
+  font-weight: bold;
+  min-width: 220px;
+}
+
+.reset-button:hover {
+  background: #ffbbbb;
+}
+
+hr {
+  margin: 36px 0 24px 0;
+  border: none;
+  border-top: 2px solid #ddd;
+}
+
+select {
+  font-size: 22px;
+  padding: 12px 16px;
+  border: 2px solid #333;
+  border-radius: 10px;
+  background: white;
+  cursor: pointer;
+  min-width: 220px;
+}
+
+/* プレビューエリア */
+.preview-area {
+  margin-top: 24px;
+}
+
+.preview-title {
+  font-size: 18px;
+  font-weight: bold;
+  margin-bottom: 10px;
+}
+
+.preview-box {
+  width: 260px;
+  height: 220px;
+  margin: 0 auto;
+  border: 2px dashed #777;
+  border-radius: 14px;
+  background: #fafafa;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+
+#imagePreview {
+  display: none;
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
+}
+
+#noPreviewText {
+  color: #777;
+  font-size: 14px;
+  padding: 12px;
+}
+
+/* 状態表示 */
+.status-message {
+  font-size: 18px;
+  font-weight: bold;
+  padding: 12px 18px;
+  border-radius: 10px;
+  margin: 24px auto 0 auto;
+  max-width: 420px;
+  background: #eeeeee;
+  color: #333;
+}
+
+.status-normal {
+  background: #eeeeee;
+  color: #333;
+}
+
+.status-loading {
+  background: #fff4cc;
+  color: #8a6500;
+}
+
+.status-success {
+  background: #ddffdd;
+  color: #146b14;
+}
+
+.status-error {
+  background: #ffdddd;
+  color: #990000;
+}
+
+/* 処理中のボタン */
+button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.screen-page {
+  background: #f7f7f7;
+  margin: 0;
+  padding: 20px;
+  text-align: center;
+}
+
+.screen-page canvas {
+  background: white;
+  border: 3px solid #333;
+  max-width: 95vw;
+  height: auto;
+}
+
+.screen-page {
+  background: black;
+  margin: 0;
+  padding: 0;
+  width: 100vw;
+  height: 100vh;
+  overflow: hidden;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.screen-wrapper {
+  position: relative;
+  width: 100vw;
+  height: 100vh;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: black;
+}
+
+.screen-wrapper canvas {
+  display: block;
+  width: 100vw;
+  height: 100vh;
+  border: none;
+}
+
+/* 全画面ボタン */
+.fullscreen-button {
+  position: absolute;
+  right: 24px;
+  bottom: 24px;
+
+  font-size: 22px;
+  padding: 14px 28px;
+
+  border: 2px solid #333;
+  border-radius: 12px;
+
+  background: rgba(255, 255, 255, 0.9);
+  color: #222;
+
+  cursor: pointer;
+  z-index: 10;
+}
+
+.fullscreen-button:hover {
+  background: white;
+}
+
+/* 全画面中はボタンを非表示 */
+.fullscreen-active .fullscreen-button {
+  display: none;
+}

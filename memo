@@ -1,0 +1,17 @@
+server.js
+→ Node.jsサーバー
+
+screen.html
+→ 大型スクリーン用画面
+
+staff.html
+→ 受付スタッフ用画面
+
+screen.js
+→ 大型スクリーン側の動き
+
+staff.js
+→ 受付画面側の操作
+
+style.css
+→ 見た目
