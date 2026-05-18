@@ -12,60 +12,72 @@ const io = new Server(server);
 
 const port = process.env.PORT || 3000;
 
-const characterHistory = [];
-const MAX_CHARACTERS = 30;
+// =======================
+// Python 実行パス（重要）
+// =======================
+const pythonPath =
+  process.platform === "win32"
+    ? "python"
+    : "python3";
 
-// Pythonのパス
-const PYTHON_PATH = "C:\\Users\\LoiJ6\\anaconda3\\python.exe";
-
-// 背景除去スクリプトのパス
+// =======================
+// 背景除去スクリプト
+// =======================
 const REMOVE_BG_SCRIPT = path.join(__dirname, "tools", "remove_bg.py");
 
-// publicフォルダを公開
+// =======================
+// public フォルダ公開
+// =======================
 app.use(express.static("public"));
 
-// uploadsフォルダを用意
+// =======================
+// uploads フォルダ準備
+// =======================
 const uploadDir = path.join(__dirname, "public", "uploads");
 
 if (!fs.existsSync(uploadDir)) {
   fs.mkdirSync(uploadDir, { recursive: true });
 }
 
-// アップロード設定
+// =======================
+// multer 設定
+// =======================
 const storage = multer.diskStorage({
-  destination: function (req, file, cb) {
+  destination(req, file, cb) {
     cb(null, uploadDir);
   },
-  filename: function (req, file, cb) {
-    const uniqueName = Date.now() + "-" + Math.round(Math.random() * 1e9);
-    const ext = path.extname(file.originalname);
-    cb(null, uniqueName + ext);
+  filename(req, file, cb) {
+    const unique =
+      Date.now() + "-" + Math.round(Math.random() * 1e9);
+    cb(null, unique + path.extname(file.originalname));
   }
 });
 
 const upload = multer({
-  storage: storage,
-  fileFilter: function (req, file, cb) {
+  storage,
+  fileFilter(req, file, cb) {
     if (file.mimetype.startsWith("image/")) {
       cb(null, true);
     } else {
-      cb(new Error("画像ファイルだけアップロードできます"));
+      cb(new Error("画像ファイルのみ対応"));
     }
   }
 });
 
-// Pythonで背景除去する関数
+// =======================
+// Python 背景除去処理
+// =======================
 function removeBackground(inputPath, outputPath) {
   return new Promise((resolve, reject) => {
     execFile(
-      PYTHON_PATH,
+      pythonPath,                       // ← ★ここ重要
       [REMOVE_BG_SCRIPT, inputPath, outputPath],
       { encoding: "utf8" },
       (error, stdout, stderr) => {
-        console.log("Python stdout:", stdout);
+        console.log("Python stdout:\n", stdout);
 
         if (stderr) {
-          console.log("Python stderr:", stderr);
+          console.log("Python stderr:\n", stderr);
         }
 
         if (error) {
@@ -74,7 +86,9 @@ function removeBackground(inputPath, outputPath) {
         }
 
         if (!fs.existsSync(outputPath)) {
-          reject(new Error("背景除去後の画像が作成されていません"));
+          reject(
+            new Error("背景除去後の画像が生成されていません")
+          );
           return;
         }
 
@@ -84,86 +98,80 @@ function removeBackground(inputPath, outputPath) {
   });
 }
 
-// 画像アップロードAPI
-app.post("/upload", upload.single("characterImage"), async (req, res) => {
-  if (!req.file) {
-    return res.status(400).json({
-      success: false,
-      message: "画像ファイルがありません"
-    });
+// =======================
+// 画像アップロード API
+// =======================
+app.post(
+  "/upload",
+  upload.single("characterImage"),
+  async (req, res) => {
+    if (!req.file) {
+      return res.status(400).json({
+        success: false,
+        message: "画像がありません"
+      });
+    }
+
+    try {
+      const originalName = req.file.originalname;
+      const inputPath = req.file.path;
+
+      const parsed = path.parse(req.file.filename);
+      const cutFileName = parsed.name + "_cut.png";
+      const outputPath = path.join(uploadDir, cutFileName);
+
+      console.log("元画像:", inputPath);
+      console.log("背景除去後:", outputPath);
+
+      await removeBackground(inputPath, outputPath);
+
+      res.json({
+        success: true,
+        imagePath: "uploads/" + cutFileName,
+        originalName
+      });
+
+    } catch (err) {
+      console.error("背景除去エラー:", err);
+
+      res.status(500).json({
+        success: false,
+        message: "背景除去に失敗しました"
+      });
+    }
   }
+);
 
-  try {
-    const originalName = req.file.originalname;
+// =======================
+// Socket.IO
+// =======================
+const characterHistory = [];
+const MAX_CHARACTERS = 30;
 
-    // アップロードされた元画像の実体パス
-    const inputPath = req.file.path;
-
-    // 背景除去後のファイル名
-    const parsed = path.parse(req.file.filename);
-    const cutFileName = parsed.name + "_cut.png";
-
-    // 背景除去後の実体パス
-    const outputPath = path.join(uploadDir, cutFileName);
-
-    console.log("元画像:", inputPath);
-    console.log("背景除去後:", outputPath);
-
-    // Pythonで背景除去
-    await removeBackground(inputPath, outputPath);
-
-    // ブラウザから見えるパス
-    const imagePath = "uploads/" + cutFileName;
-
-    console.log("画像アップロード完了:", imagePath);
-    console.log("元ファイル名:", originalName);
-
-    res.json({
-      success: true,
-      imagePath: imagePath,
-      originalName: originalName
-    });
-  } catch (error) {
-    console.error("背景除去エラー:", error);
-
-    res.status(500).json({
-      success: false,
-      message: "背景除去に失敗しました"
-    });
-  }
-});
-
-// Socket.IO通信
 io.on("connection", (socket) => {
-  console.log("接続されました:", socket.id);
+  console.log("接続:", socket.id);
 
-  // 新しく接続した大画面に、現在のキャラ一覧を送る
   socket.emit("syncCharacters", characterHistory);
 
   socket.on("addCharacter", (data) => {
-    console.log("キャラ追加:", data);
-
-    // サーバー側に履歴として保存
     characterHistory.push(data);
 
-    // 最大数を超えたら古いキャラから消す
     while (characterHistory.length > MAX_CHARACTERS) {
       characterHistory.shift();
     }
 
-    // 接続中の全画面へ送信
     io.emit("newCharacter", data);
   });
 
   socket.on("resetCharacters", () => {
-    console.log("全キャラ削除");
-
     characterHistory.length = 0;
-
     io.emit("clearCharacters");
   });
 });
 
+// =======================
+// サーバー起動
+// =======================
 server.listen(port, () => {
   console.log(`サーバー起動中: http://localhost:${port}`);
 });
