@@ -5,9 +5,6 @@ import os
 
 
 def read_image_unicode(path):
-    """
-    日本語パス対応の画像読み込み
-    """
     try:
         data = np.fromfile(path, dtype=np.uint8)
         image = cv2.imdecode(data, cv2.IMREAD_COLOR)
@@ -18,17 +15,12 @@ def read_image_unicode(path):
 
 
 def save_image_unicode(path, image):
-    """
-    日本語パス対応の画像保存
-    """
     try:
         ext = os.path.splitext(path)[1]
-
         if ext == "":
             ext = ".png"
 
         success, encoded = cv2.imencode(ext, image)
-
         if not success:
             return False
 
@@ -55,21 +47,18 @@ def remove_white_background(input_path, output_path):
 
     print("画像サイズ:", image.shape)
 
-    # 少しぼかしてノイズを減らす
-    blurred = cv2.GaussianBlur(image, (5, 5), 0)
+    # ✅ ノイズを減らす（少し強め）
+    blurred = cv2.GaussianBlur(image, (7, 7), 0)
 
-    # HSV色空間に変換
     hsv = cv2.cvtColor(blurred, cv2.COLOR_BGR2HSV)
     h, s, v = cv2.split(hsv)
 
-    # 白っぽい背景を判定
-    # 背景が残るなら s < 60, v > 160 などに調整
-    # キャラまで消えるなら s < 25, v > 220 などに調整
-    background_mask = (s < 45) & (v > 180)
+    # ✅ 改良版 背景判定（安定版）
+    background_mask = ((s < 60) & (v > 160)) | (v > 240)
     background_mask = background_mask.astype(np.uint8) * 255
 
-    # ノイズ除去
-    kernel = np.ones((3, 3), np.uint8)
+    # ✅ ノイズ除去強化
+    kernel = np.ones((5, 5), np.uint8)
 
     background_mask = cv2.morphologyEx(
         background_mask,
@@ -85,15 +74,15 @@ def remove_white_background(input_path, output_path):
         iterations=2
     )
 
-    # RGBA画像に変換
+    # RGBA変換
     image_rgb = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
     image_rgba = cv2.cvtColor(image_rgb, cv2.COLOR_RGB2RGBA)
 
-    # 背景を透明化
+    # ✅ 背景透明化
+    image_rgba[:, :, 3] = 255
     image_rgba[background_mask == 255, 3] = 0
-    image_rgba[background_mask == 0, 3] = 255
 
-    # 透明でない部分だけをトリミング
+    # ✅ トリミング（安全版）
     alpha = image_rgba[:, :, 3]
     coords = cv2.findNonZero(alpha)
 
@@ -108,17 +97,19 @@ def remove_white_background(input_path, output_path):
 
         image_rgba = image_rgba[y1:y2, x1:x2]
         print("トリミング後サイズ:", image_rgba.shape)
+
     else:
-        print("エラー: キャラ部分が見つかりませんでした")
-        sys.exit(1)
+        # ✅ 失敗時の安全処理（超重要）
+        print("警告: キャラ検出失敗 → 元画像をそのまま使用")
 
-    # 出力先フォルダ作成
+        image_rgba = cv2.cvtColor(image, cv2.COLOR_BGR2BGRA)
+        image_rgba[:, :, 3] = 255
+
+    # 保存準備
     output_dir = os.path.dirname(output_path)
-
     if output_dir:
         os.makedirs(output_dir, exist_ok=True)
 
-    # RGBAからBGRAへ変換して保存
     output_bgra = cv2.cvtColor(image_rgba, cv2.COLOR_RGBA2BGRA)
 
     success = save_image_unicode(output_path, output_bgra)
@@ -135,8 +126,6 @@ if __name__ == "__main__":
     if len(sys.argv) < 3:
         print("使い方:")
         print('python tools/remove_bg.py "入力画像" "出力画像"')
-        print("例:")
-        print('python tools/remove_bg.py "public\\uploads\\test.jpg" "public\\uploads\\test_cut.png"')
         sys.exit(1)
     else:
         input_path = sys.argv[1]
