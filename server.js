@@ -4,26 +4,13 @@ const { Server } = require("socket.io");
 const multer = require("multer");
 const path = require("path");
 const fs = require("fs");
-const { execFile } = require("child_process");
+const sharp = require("sharp");
 
 const app = express();
 const server = http.createServer(app);
 const io = new Server(server);
 
 const port = process.env.PORT || 3000;
-
-// =======================
-// Python 実行パス（重要）
-// =======================
-const pythonPath =
-  process.platform === "win32"
-    ? "python"
-    : "python3";
-
-// =======================
-// 背景除去スクリプト
-// =======================
-const REMOVE_BG_SCRIPT = path.join(__dirname, "tools", "remove_bg.py");
 
 // =======================
 // public フォルダ公開
@@ -34,7 +21,6 @@ app.use(express.static("public"));
 // uploads フォルダ準備
 // =======================
 const uploadDir = path.join(__dirname, "public", "uploads");
-
 if (!fs.existsSync(uploadDir)) {
   fs.mkdirSync(uploadDir, { recursive: true });
 }
@@ -59,43 +45,58 @@ const upload = multer({
     if (file.mimetype.startsWith("image/")) {
       cb(null, true);
     } else {
-      cb(new Error("画像ファイルのみ対応"));
+      cb(new Error("画像ファイルのみアップロード可能"));
     }
   }
 });
 
 // =======================
-// Python 背景除去処理
+// Node.js 背景除去（白背景）
 // =======================
-function removeBackground(inputPath, outputPath) {
-  return new Promise((resolve, reject) => {
-    execFile(
-      pythonPath,                       // ← ★ここ重要
-      [REMOVE_BG_SCRIPT, inputPath, outputPath],
-      { encoding: "utf8" },
-      (error, stdout, stderr) => {
-        console.log("Python stdout:\n", stdout);
+async function removeWhiteBackgroundNode(inputPath, outputPath) {
+  const image = sharp(inputPath);
 
-        if (stderr) {
-          console.log("Python stderr:\n", stderr);
-        }
+  const { data, info } = await image
+    .ensureAlpha()
+    .raw()
+    .toBuffer({ resolveWithObject: true });
 
-        if (error) {
-          reject(error);
-          return;
-        }
+  const threshold = 240; // 白判定（調整可）
+  const channels = info.channels; // RGBA = 4
 
-        if (!fs.existsSync(outputPath)) {
-          reject(
-            new Error("背景除去後の画像が生成されていません")
-          );
-          return;
-        }
+  for (let i = 0; i < data.length; i += channels) {
+    const r = data[i];
+    const g = data[i + 1];
+    const b = data[i + 2];
 
-        resolve();
-      }
-    );
-  });
+    // 白っぽいところを透明化
+    if (r > threshold && g > threshold && b > threshold) {
+      data[i + 3] = 0;
+    }
+  }
+
+  await sharp(data, {
+    raw: {
+      width: info.width,
+      height: info.height,
+      channels
+    }
+  })
+    .png()
+    .toFile(outputPath);
+}
+
+// =======================
+// 背景除去ラッパー（失敗しても止めない）
+// =======================
+async function removeBackground(inputPath, outputPath) {
+  try {
+    await removeWhiteBackgroundNode(inputPath, outputPath);
+  } catch (err) {
+    console.error("背景除去失敗 → 元画像を使用", err);
+    // 展示向け：失敗しても必ず画像を返す
+    fs.copyFileSync(inputPath, outputPath);
+  }
 }
 
 // =======================
@@ -132,11 +133,11 @@ app.post(
       });
 
     } catch (err) {
-      console.error("背景除去エラー:", err);
+      console.error("アップロード処理エラー:", err);
 
       res.status(500).json({
         success: false,
-        message: "背景除去に失敗しました"
+        message: "処理に失敗しました"
       });
     }
   }
@@ -151,6 +152,7 @@ const MAX_CHARACTERS = 30;
 io.on("connection", (socket) => {
   console.log("接続:", socket.id);
 
+  // 既存キャラ同期
   socket.emit("syncCharacters", characterHistory);
 
   socket.on("addCharacter", (data) => {
